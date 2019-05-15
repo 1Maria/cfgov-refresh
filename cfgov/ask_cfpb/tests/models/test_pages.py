@@ -27,7 +27,7 @@ from ask_cfpb.models.django import (
 )
 from ask_cfpb.models.pages import (
     PORTAL_CATEGORY_SORT_ORDER, REUSABLE_TEXT_TITLES, AnswerPage,
-    PortalSearchPage, validate_page_number
+    AnswerLandingPage, PortalSearchPage, validate_page_number
 )
 from ask_cfpb.scripts.export_ask_data import (
     assemble_output, clean_and_strip, export_questions
@@ -198,7 +198,7 @@ class PortalSearchPageTestCase(TestCase):
         self.test_user = User.objects.last()
         self.factory = RequestFactory()
         self.english_ask_parent = create_page(
-            SublandingPage,
+            AnswerLandingPage,
             'Ask CFPB',
             'ask-cfpb',
             self.ROOT_PAGE)
@@ -239,6 +239,14 @@ class PortalSearchPageTestCase(TestCase):
             self.spanish_portal,
             language='es',
             portal_topic_id=1)
+        self.answer_page = create_page(
+            AnswerPage,
+            'English auto-loans question-8888?',
+            'english-auto-loans-question-en-8888',
+            self.english_ask_parent,
+            primary_portal_topic_id=1,
+            featured=True,
+        )
         self.answer_page_es = create_page(
             AnswerPage,
             'Spanish test question-es-9999?',
@@ -496,6 +504,18 @@ class PortalSearchPageTestCase(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Amortización')
+
+    def test_landing_page_live_portal(self):
+        landing_page = self.english_ask_parent
+        self.assertEqual(len(landing_page.get_portal_cards()), 1)
+
+    def test_landing_page_no_live_portals(self):
+        landing_page = self.english_ask_parent
+        self.english_portal.live = False
+        self.english_portal.save()
+        self.english_search_page.live = False
+        self.english_search_page.save()
+        self.assertEqual(landing_page.get_portal_cards(), [])
 
 
 class AnswerPageTestCase(TestCase):
